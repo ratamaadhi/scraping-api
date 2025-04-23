@@ -19,9 +19,12 @@ async function fetchMetadata(url: string): Promise<Metadata> {
 
     const { data: html } = await axios.get(url, {
       headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'User-Agent': 'Mozilla/5.0 (compatible; Bot/0.1; +http://example.com)'
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'Accept-Encoding': 'gzip, deflate, br',
       },
       timeout: 10000,
     });
@@ -30,7 +33,9 @@ async function fetchMetadata(url: string): Promise<Metadata> {
 
     const getMetaTag = (name: string): string | undefined => {
       // Consolidate meta tag retrieval
-      return $(`meta[name="${name}"], meta[property="og:${name}"], meta[property="twitter:${name}"]`).attr('content');
+      return $(
+        `meta[name="${name}"], meta[property="og:${name}"], meta[property="twitter:${name}"]`
+      ).attr('content');
     };
 
     const title = getMetaTag('title') || $('title').first().text();
@@ -51,7 +56,9 @@ async function fetchMetadata(url: string): Promise<Metadata> {
     console.error(`Error fetching metadata for ${url}:`, error);
     if (axios.isAxiosError(error)) {
       if (error.response) {
-        throw new Error(`Failed to fetch ${url}: Status ${error.response.status}`);
+        throw new Error(
+          `Failed to fetch ${url}: Status ${error.response.status}`
+        );
       } else if (error.request) {
         throw new Error(`Failed to fetch ${url}: No response received`);
       }
