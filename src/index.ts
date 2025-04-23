@@ -1,8 +1,11 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import fetchMetadata from './metadataFetcher.js'
 
 const app = new Hono()
+
+app.use(cors())
 
 app.get('/metadata', async (c) => {
   const url = c.req.query('url')
@@ -22,7 +25,7 @@ app.get('/health', (c) => c.text('OK'))
 
 serve({
   fetch: app.fetch,
-  port: 3000
+  port: 3001
 }, (info) => {
   console.log(`Server is running on http://localhost:${info.port}`)
 })
