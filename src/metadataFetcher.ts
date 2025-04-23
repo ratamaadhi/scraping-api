@@ -5,7 +5,7 @@ interface Metadata {
   title?: string;
   description?: string;
   image?: string;
-  url?: string;
+  url?: string; // Consider making this a URL type
 }
 
 async function fetchMetadata(url: string): Promise<Metadata> {
@@ -19,19 +19,18 @@ async function fetchMetadata(url: string): Promise<Metadata> {
 
     const { data: html } = await axios.get(url, {
       headers: {
-        // Use a common user-agent to mimic a browser
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'User-Agent': 'Mozilla/5.0 (compatible; Bot/0.1; +http://example.com)'
       },
-      // Allow fetching from various sites, might need adjustments for specific site restrictions
-      timeout: 10000, // 10 seconds timeout
+      timeout: 10000,
     });
 
     const $ = cheerio.load(html);
 
     const getMetaTag = (name: string): string | undefined => {
-      return $(`meta[name="${name}"]`).attr('content') || $(`meta[property="og:${name}"]`).attr('content') || $(`meta[property="twitter:${name}"]`).attr('content');
+      // Consolidate meta tag retrieval
+      return $(`meta[name="${name}"], meta[property="og:${name}"], meta[property="twitter:${name}"]`).attr('content');
     };
 
     const title = getMetaTag('title') || $('title').first().text();
@@ -49,14 +48,13 @@ async function fetchMetadata(url: string): Promise<Metadata> {
       url: siteUrl,
     };
   } catch (error: any) {
-    console.error(`Error fetching metadata for ${url}:`, error.message);
-    // Provide more specific error feedback if possible
+    console.error(`Error fetching metadata for ${url}:`, error);
     if (axios.isAxiosError(error)) {
-        if (error.response) {
-            throw new Error(`Failed to fetch URL: Status ${error.response.status}`);
-        } else if (error.request) {
-            throw new Error('Failed to fetch URL: No response received');
-        }
+      if (error.response) {
+        throw new Error(`Failed to fetch ${url}: Status ${error.response.status}`);
+      } else if (error.request) {
+        throw new Error(`Failed to fetch ${url}: No response received`);
+      }
     }
     throw new Error(`Failed to process metadata for ${url}`);
   }
