@@ -1,27 +1,17 @@
-import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
-import { cors } from 'hono/cors'
-import fetchMetadata from './metadataFetcher.js'
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { handleHealthCheck } from './handler/health.js';
+import { handleMetadataFetch } from './handler/metadata.js';
+import { handleScrape } from './handler/scrape.js';
 
-const app = new Hono()
+const app = new Hono();
 
-app.use(cors())
+app.use(cors());
 
-app.get('/metadata', async (c) => {
-  const url = c.req.query('url')
-  if (!url) {
-    return c.text('URL query parameter is required', 400)
-  }
-
-  try {
-    const metadata = await fetchMetadata(url)
-    return c.json(metadata)
-  } catch (error) {
-    return c.text('Failed to fetch metadata', 500)
-  }
-})
-
-app.get('/health', (c) => c.text('OK'))
+app.get('/metadata', handleMetadataFetch);
+app.get('/health', handleHealthCheck);
+app.get('/scrape', handleScrape);
 
 serve({
   fetch: app.fetch,

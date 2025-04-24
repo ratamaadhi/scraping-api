@@ -32,13 +32,12 @@ async function fetchMetadata(url: string): Promise<Metadata> {
     const $ = cheerio.load(html);
 
     const getMetaTag = (name: string): string | undefined => {
-      // Consolidate meta tag retrieval
       return $(
         `meta[name="${name}"], meta[property="og:${name}"], meta[property="twitter:${name}"]`
       ).attr('content');
     };
 
-    const title = getMetaTag('title') || $('title').first().text();
+    const title = getMetaTag('title');
     const description = getMetaTag('description');
     const image = getMetaTag('image');
     const siteUrl = getMetaTag('url') || url; // Use original URL as fallback
