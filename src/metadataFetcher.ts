@@ -1,69 +1,70 @@
 import axios from 'axios';
+import type { CheerioAPI } from 'cheerio';
 import * as cheerio from 'cheerio';
 
 interface Metadata {
   title?: string;
   description?: string;
   image?: string;
-  url?: string; // Consider making this a URL type
+  url: URL; // Use URL type for the URL
 }
 
-async function fetchMetadata(url: string): Promise<Metadata> {
+export default async function fetchMetadata(url: string): Promise<Metadata> {
   try {
-    // Validate URL
-    try {
-      new URL(url);
-    } catch (_) {
-      throw new Error('Invalid URL provided');
-    }
-
-    const { data: html } = await axios.get(url, {
-      headers: {
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-        'Accept-Encoding': 'gzip, deflate, br',
-      },
-      timeout: 10000,
-    });
-
-    const $ = cheerio.load(html);
-
-    const getMetaTag = (name: string): string | undefined => {
-      return $(
-        `meta[name="${name}"], meta[property="og:${name}"], meta[property="twitter:${name}"]`
-      ).attr('content');
-    };
-
-    const title = getMetaTag('title');
-    const description = getMetaTag('description');
-    const image = getMetaTag('image');
-    const siteUrl = getMetaTag('url') || url; // Use original URL as fallback
-
-    // Basic cleanup
-    const cleanText = (text?: string): string | undefined => text?.trim();
-
+    validateURL(url);
+    const html = await getHTMLContent(url);
+    const $: CheerioAPI = cheerio.load(html);
+    
     return {
-      title: cleanText(title),
-      description: cleanText(description),
-      image: image, // URLs usually don't need trimming
-      url: siteUrl,
+      title: cleanText(getMetaTag($, 'title')),
+      description: cleanText(getMetaTag($, 'description')),
+      image: getMetaTag($, 'image'),
+      url: new URL(getMetaTag($, 'url') || url), // Use original URL as fallback
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error fetching metadata for ${url}:`, error);
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        throw new Error(
-          `Failed to fetch ${url}: Status ${error.response.status}`
-        );
-      } else if (error.request) {
-        throw new Error(`Failed to fetch ${url}: No response received`);
-      }
-    }
     throw new Error(`Failed to process metadata for ${url}`);
   }
 }
 
-export default fetchMetadata;
+function validateURL(url: string): void {
+  try {
+    new URL(url);
+  } catch (e) {
+    throw new Error('Invalid URL');
+  }
+}
+
+async function getHTMLContent(url: string): Promise<string> {
+  const { data: html } = await axios.get(url, {
+    headers: {
+      Accept:
+        'text/html,application/xhtml+xml,application/xml;q=0.1,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+      'Accept-Encoding': 'gzip, deflate, br',
+    },
+    timeout: 10000,
+  });
+  return html;
+}
+
+function getMetaTag($: CheerioAPI, name: string): string | undefined {
+  const metaTags = [
+    `meta[name="${name}"]`,
+    `meta[property="og:${name}"]`,
+    `meta[property="twitter:${name}"]`
+  ];
+  
+  for (const tag of metaTags) {
+    const content = $(tag).attr('content');
+    if (content) return content;
+  }
+  
+  return undefined;
+}
+
+function cleanText(text?: string): string | undefined {
+  return text?.trim();
+}

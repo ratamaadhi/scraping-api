@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { type LaunchOptions } from 'puppeteer';
 
 interface ScrapeResult {
   title: string | null;
@@ -8,39 +8,46 @@ interface ScrapeResult {
 }
 
 export async function scrapeUrl(url: string): Promise<ScrapeResult> {
-  let browser;
+  let browser: puppeteer.Browser | null = null;
+
   try {
-    browser = await puppeteer.launch({
+    const launchOptions: LaunchOptions = {
       headless: true,
       args: ['--disable-http2'],
-    });
+    };
+
+    browser = await puppeteer.launch(launchOptions);
     const page = await browser.newPage();
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
     );
-    await page.goto(url, { waitUntil: 'networkidle2' }); // Wait for network activity to settle
 
+    const response = await page.goto(url, {
+      waitUntil: 'networkidle2',
+      timeout: 0,
+    });
+    if (!response || !response.ok()) {
+      throw new Error(
+        `Failed to load page: ${url}, Status: ${response?.status()}`
+      );
+    }
+
+    const finalUrl = response.url() || page.url();
     const title = await page.title();
 
-    const getMetaTag = async (name: string): Promise<string | null> => {
-      try {
-        const selector = `meta[name="${name}"], meta[property="og:${name}"], meta[property="twitter:${name}"]`;
-
-        const element = await page.$(selector);
-        if (!element) {
-          return null;
-        }
-
-        return await page.evaluate((el) => el.getAttribute('content'), element);
-      } catch (error) {
-        console.error(`Error getting meta tag ${name} for ${url}:`, error);
-        return null;
-      }
-    };
-
-    const description = await getMetaTag('description');
-    const image = await getMetaTag('image');
-    const siteUrl = (await getMetaTag('url')) || url;
+    const description = await getElementAttribute(
+      page,
+      'meta[property="og:description"]',
+      'content'
+    );
+    const image = await getElementAttribute(
+      page,
+      'meta[property="og:image"]',
+      'content'
+    );
+    const siteUrl =
+      (await getElementAttribute(page, 'meta[property="og:url"]', 'content')) ||
+      finalUrl;
 
     return {
       title,
@@ -50,11 +57,28 @@ export async function scrapeUrl(url: string): Promise<ScrapeResult> {
     };
   } catch (error) {
     console.error(`Error scraping ${url}:`, error);
-    // Re-throw a more specific error or return a structured error object
-    throw new Error(`Failed to scrape page: ${url}`);
+    throw error;
   } finally {
     if (browser) {
       await browser.close();
     }
   }
+}
+
+async function getElementAttribute(
+  page: puppeteer.Page,
+  selector: string,
+  attribute: string
+): Promise<string | null> {
+  return page.evaluate(
+    (selector, attribute) => {
+      const element = document.querySelector(selector);
+      if (element) {
+        return element.getAttribute(attribute);
+      }
+      return null;
+    },
+    selector,
+    attribute
+  );
 }
