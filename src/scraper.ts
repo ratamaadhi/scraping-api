@@ -14,6 +14,10 @@ export async function scrapeUrl(url: string): Promise<ScrapeResult> {
     const launchOptions: LaunchOptions = {
       headless: true,
       args: ['--disable-http2'],
+      executablePath:
+        process.env.NODE_ENV === 'production'
+          ? '/opt/render/.cache/puppeteer/chrome/linux-135.0.7049.95/chrome-linux64/chrome'
+          : undefined,
     };
 
     browser = await puppeteer.launch(launchOptions);
