@@ -19,7 +19,7 @@ export async function scrapeUrl(url: string): Promise<ScrapeResult> {
     browser = await puppeteer.launch(launchOptions);
     const page = await browser.newPage();
     await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+      'WhatsApp/2.21.12.21 A'
     );
 
     const response = await page.goto(url, {

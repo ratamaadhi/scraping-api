@@ -38,12 +38,8 @@ function validateURL(url: string): void {
 async function getHTMLContent(url: string): Promise<string> {
   const { data: html } = await axios.get(url, {
     headers: {
-      Accept:
-        'text/html,application/xhtml+xml,application/xml;q=0.1,image/webp,image/apng,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
       'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-      'Accept-Encoding': 'gzip, deflate, br',
+        'WhatsApp/2.21.12.21 A',
     }
   });
   return html;
